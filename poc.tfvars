@@ -1,0 +1,5 @@
+name            = "foo"
+location        = "East US"
+gh_runner_token = "token"
+gh_repo_name    = "repo"
+gh_org_name     = "poc"
