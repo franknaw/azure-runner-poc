@@ -66,22 +66,8 @@ module "resource_group" {
 #   special = false
 # }
 
-# resource "tls_private_key" "ssh_keys" {
-#   for_each  = local.hosts
-#   algorithm = "RSA"
-#   rsa_bits  = 4096
-# }
-
-# resource "local_file" "pem_files" {
-#   for_each        = local.hosts
-#   content         = tls_private_key.ssh_keys[each.value].private_key_pem
-#   filename        = "${path.module}/${each.value}.pem"
-#   file_permission = "0600"
-# }
-
 module "pem" {
-  # source ="git::https://github.com/franknaw/azure-private-key.git"
-  source ="../azure-private-key"
+  source ="git::https://github.com/franknaw/azure-private-key.git"
   hosts = local.hosts 
 }
 
@@ -133,12 +119,8 @@ module "runner" {
   enable_boot_diagnostics = true
 
   username   = "adminuser"
-  # public_key = tls_private_key.ssh_keys["runner"].public_key_openssh
   public_key                 = module.pem.ssh_keys["runner"].public_key_pem
 
 
   runner_labels = ["azure", "dev"]
 }
-
-
-# ./config.sh --url https://github.com/franknaw/azure-runner-poc --token AJJHA2R6G23J2B2MV2TTTPDC3MLAM
