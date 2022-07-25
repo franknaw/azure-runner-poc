@@ -11,12 +11,20 @@ provider "azurerm" {
   features {}
 }
 
+locals {
+  hosts = toset(["bastion", "runner"])
+  access_list = {
+    my_ip = "${chomp(data.http.my_ip.body)}/32"
+  }
+}
+
+data "http" "my_ip" {
+  url = "http://ipv4.icanhazip.com"
+}
+
 data "azurerm_subscription" "current" {
 }
 
-# output "subscription" {
-#   value = data.azurerm_subscription.current
-# }
 
 module "subscription" {
   source          = "git::https://github.com/Azure-Terraform/terraform-azurerm-subscription-data.git?ref=v1.0.0"
@@ -52,54 +60,68 @@ module "resource_group" {
   tags     = module.metadata.tags
 }
 
-module "virtual_network" {
-  source = "git::https://github.com/Azure-Terraform/terraform-azurerm-virtual-network.git?ref=v5.0.0"
+# resource "random_string" "random" {
+#   length  = 12
+#   upper   = false
+#   special = false
+# }
 
-  naming_rules = module.naming.yaml
+# resource "tls_private_key" "ssh_keys" {
+#   for_each  = local.hosts
+#   algorithm = "RSA"
+#   rsa_bits  = 4096
+# }
 
+# resource "local_file" "pem_files" {
+#   for_each        = local.hosts
+#   content         = tls_private_key.ssh_keys[each.value].private_key_pem
+#   filename        = "${path.module}/${each.value}.pem"
+#   file_permission = "0600"
+# }
+
+module "pem" {
+  # source ="git::https://github.com/franknaw/azure-private-key.git"
+  source ="../azure-private-key"
+  hosts = local.hosts 
+}
+
+module "vnet" {
+  source = "git::https://github.com/franknaw/azure-simple-network.git"
+
+  # naming_rules = module.naming.yaml
+
+  resource_group_name      = module.resource_group.name
+  location                 = module.resource_group.location
+  names                    = module.metadata.names
+  tags                     = module.metadata.tags
+  address_space            = ["10.0.0.0/22"]
+  address_prefixes_private = ["10.0.1.0/24"]
+  address_prefixes_public  = ["10.0.2.0/24"]
+}
+
+module "bastion" {
+  source = "git::https://github.com/franknaw/azure-simple-bastion.git" 
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   names               = module.metadata.names
   tags                = module.metadata.tags
 
-  address_space = ["10.1.0.0/24"]
+  subnet_id = module.vnet.subnet_public.id
 
-  subnets = {
-    "iaas-private" = {
-      cidrs                   = ["10.1.0.0/24"]
-      allow_vnet_inbound      = true
-      allow_vnet_outbound     = true
-      allow_internet_outbound = true
-      service_endpoints       = ["Microsoft.Storage"]
-    }
-  }
+  username                   = "adminuser"
+  public_key                 = module.pem.ssh_keys["bastion"].public_key_pem
+  source_address_prefixes    = local.access_list
+  destination_address_prefix = module.runner.private_ip
+
 }
-
-module "storage_account" {
-  source                    = "git::https://github.com/Azure-Terraform/terraform-azurerm-storage-account.git?ref=v0.12.1"
-  resource_group_name       = module.resource_group.name
-  location                  = module.resource_group.location
-  tags                      = module.metadata.tags
-  account_kind              = "StorageV2"
-  replication_type          = "LRS"
-  account_tier              = "Standard"
-  default_network_rule      = "Allow"
-  shared_access_key_enabled = true
-  traffic_bypass            = ["AzureServices", "Logging"]
-  service_endpoints = {
-    "iaas-outbound" = module.virtual_network.subnet["iaas-private"].id
-  }
-}
-
-
 module "runner" {
-  source              = "./runner"
+  source              = "git::https://github.com/franknaw/azure-simple-github-runner"
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   name                = var.name
   tags                = module.metadata.tags
 
-  subnet_id = module.virtual_network.subnets["iaas-private"].id
+  subnet_id = module.vnet.subnet_private.id
 
   runner_scope     = "repo"
   runner_os        = "linux"
@@ -108,17 +130,15 @@ module "runner" {
   ## gen repo runner token https://github.community/t/api-to-generate-runners-token/16963
   github_runner_token = var.gh_runner_token
 
-  enable_boot_diagnostics         = true
-  diagnostics_storage_account_uri = module.storage_account.primary_blob_endpoint
+  enable_boot_diagnostics = true
+
+  username   = "adminuser"
+  # public_key = tls_private_key.ssh_keys["runner"].public_key_openssh
+  public_key                 = module.pem.ssh_keys["runner"].public_key_pem
+
 
   runner_labels = ["azure", "dev"]
 }
 
 
-
-
-
-
-
-# References
-# https://github.com/waylew-lexis/terraform-azurerm-github-runner
+# ./config.sh --url https://github.com/franknaw/azure-runner-poc --token AJJHA2R6G23J2B2MV2TTTPDC3MLAM

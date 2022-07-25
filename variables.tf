@@ -1,12 +1,7 @@
-# variable "prefix" {
-#   description = "The prefix used for all resources in this example"
-#   default = "test"
-# }
-
-# variable "location" {
-#   description = "The Azure location where all resources in this example should be created"
-#   default = "East US"
-# }
+variable "prefix" {
+  description = "The prefix used for all resources in this example"
+  default = "poc"
+}
 
 variable "location" {
   description = "github runner token"
@@ -33,5 +28,18 @@ variable "gh_repo_name" {
 variable "gh_org_name" {
   description = "The name of github organization or owner."
   type        = string
+  default     = null
+}
+
+variable "admin_username" {
+  description = "the admin user"
+  type        = string
+  default     = "adminuser"
+}
+
+variable "admin_password" {
+  description = "the admin password. leave blank to assign a random password"
+  type        = string
+  sensitive   = true
   default     = null
 }
