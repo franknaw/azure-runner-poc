@@ -12,7 +12,7 @@ provider "azurerm" {
 }
 
 locals {
-  hosts = toset(["bastion", "runner"])
+  hosts = toset(["runner"])
   access_list = {
     my_ip = "${chomp(data.http.my_ip.body)}/32"
   }
@@ -42,7 +42,7 @@ module "metadata" {
 
   market              = "us"
   project             = "https://github.com/Azure-Terraform/terraform-azurerm-virtual-network/tree/master/example/bastion"
-  location            = "eastus2"
+  location            = var.location
   environment         = "sandbox"
   product_name        = "runner1"
   business_unit       = "infra"
@@ -60,33 +60,25 @@ module "resource_group" {
   tags     = module.metadata.tags
 }
 
-# resource "random_string" "random" {
-#   length  = 12
-#   upper   = false
-#   special = false
-# }
-
-module "pem" {
-  source ="git::https://github.com/franknaw/azure-private-key.git"
-  hosts = local.hosts 
-}
-
 module "vnet" {
   source = "git::https://github.com/franknaw/azure-simple-network.git"
 
-  # naming_rules = module.naming.yaml
-
   resource_group_name      = module.resource_group.name
   location                 = module.resource_group.location
-  names                    = module.metadata.names
+  product_name             = module.metadata.names.product_name
   tags                     = module.metadata.tags
-  address_space            = ["10.0.0.0/22"]
-  address_prefixes_private = ["10.0.1.0/24"]
-  address_prefixes_public  = ["10.0.2.0/24"]
+  address_space            = ["10.10.0.0/22"]
+  address_prefixes_private = ["10.10.0.0/24"]
+  address_prefixes_public  = ["10.10.1.0/24"]
 }
 
-module "bastion" {
-  source = "git::https://github.com/franknaw/azure-simple-bastion.git" 
+module "pem" {
+  source = "git::https://github.com/franknaw/azure-private-key.git"
+  hosts  = local.hosts
+}
+
+module "runner" {
+  source              = "git::https://github.com/franknaw/azure-simple-bastion.git"
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   names               = module.metadata.names
@@ -94,33 +86,17 @@ module "bastion" {
 
   subnet_id = module.vnet.subnet_public.id
 
-  username                   = "adminuser"
-  public_key                 = module.pem.ssh_keys["bastion"].public_key_pem
+  username                   = var.username
+  public_key                 = module.pem.ssh_keys["runner"].public_key_openssh
   source_address_prefixes    = local.access_list
-  destination_address_prefix = module.runner.private_ip
+  destination_address_prefix = "*"
 
-}
-module "runner" {
-  source              = "git::https://github.com/franknaw/azure-simple-github-runner"
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  name                = var.name
-  tags                = module.metadata.tags
-
-  subnet_id = module.vnet.subnet_private.id
-
-  runner_scope     = "repo"
-  runner_os        = "linux"
-  github_repo_name = var.gh_repo_name
-  github_org_name  = var.gh_org_name
-  ## gen repo runner token https://github.community/t/api-to-generate-runners-token/16963
+  github_org_name     = var.gh_org_name
   github_runner_token = var.gh_runner_token
+  github_runner_name  = var.gh_runner_name
+  runner_labels       = ["sandbox"]
 
-  enable_boot_diagnostics = true
-
-  username   = "adminuser"
-  public_key                 = module.pem.ssh_keys["runner"].public_key_pem
-
-
-  runner_labels = ["azure", "dev"]
+  depends_on = [
+    module.vnet, module.pem
+  ]
 }
