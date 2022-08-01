@@ -90,7 +90,7 @@ module "resource_group" {
 Simple VNET Module
 */
 module "vnet" {
-  source = "git::https://github.com/franknaw/azure-simple-network.git"
+  source = "git::https://github.com/franknaw/azure-simple-network.git?ref=v1.0.0"
 
   resource_group_name      = module.resource_group.name
   location                 = module.resource_group.location
@@ -105,7 +105,7 @@ module "vnet" {
 A Module to generate ssh PEM files
 */
 module "pem" {
-  source = "git::https://github.com/franknaw/azure-private-key.git"
+  source = "git::https://github.com/franknaw/azure-private-key.git?ref=v1.0.0"
   hosts  = local.hosts
 }
 
@@ -113,7 +113,7 @@ module "pem" {
 Simple Module for creating a Bastion VM
 */
 module "bastion" {
-  source              = "git::https://github.com/franknaw/azure-simple-bastion.git"
+  source              = "git::https://github.com/franknaw/azure-simple-bastion.git?ref=v1.0.0"
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   names               = module.metadata.names
@@ -135,7 +135,7 @@ module "bastion" {
 Simple Module for creating and installing a Github runner
 */
 module "runner" {
-  source              = "git::https://github.com/franknaw/azure-simple-github-runner.git"
+  source              = "git::https://github.com/franknaw/azure-simple-github-runner.git?ref=v1.0.0"
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   names               = module.metadata.names
