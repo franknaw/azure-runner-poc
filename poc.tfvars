@@ -1,5 +1,5 @@
 location        = "eastus2"
-gh_runner_token = "AJJHA2SIE6K5EENP4XS6YUTC4P5OK"
+gh_runner_token = "AJJHA2XKZ2E6XL35OVOHHGTC47G3O"
 gh_org_name     = "franknaworg"
 gh_runner_name  = "runner1"
 username        = "fnaw"

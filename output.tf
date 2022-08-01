@@ -27,10 +27,11 @@
 #     value = module.bastion
 # }
 
-# output "private_ssh" {
-#   value = "ssh -i bastion.pem -o ProxyCommand='ssh -W %h:%p -i runner.pem adminuser@${module.runner.private_ip}' adminuser@${module.bastion.bastion_public_ip}"
-# }
-
-output "runner_ssh" {
-  value = "ssh -i .terraform/modules/pem/runner.pem ${var.username}@${module.runner.bastion_public_ip}"
+output "bastion_ssh" {
+  value = "ssh -i .terraform/modules/pem/bastion.pem ${var.username}@${module.bastion.public_ip}"
 }
+
+output "private_ssh" {
+  value = "ssh -i .terraform/modules/pem/bastion.pem -o ProxyCommand='ssh -W %h:%p -i .terraform/modules/pem/runner.pem ${var.username}@${module.runner.private_ip}' ${var.username}@${module.bastion.public_ip}"
+}
+
