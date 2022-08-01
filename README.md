@@ -10,6 +10,6 @@ Run the following.
 
 Supporting modules.
 * [Azure-Simple-Network](https://github.com/franknaw/azure-simple-network)
-* [azure-Private-Key](https://github.com/franknaw/azure-private-key)
+* [Azure-Private-Key](https://github.com/franknaw/azure-private-key)
 * [Azure-Simple-Bastion](https://github.com/franknaw/azure-simple-bastion)
 * [Azure-Simple-GitHub-Runner](https://github.com/franknaw/azure-simple-github-runner)
