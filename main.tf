@@ -70,6 +70,10 @@ module "metadata" {
   subscription_id     = module.subscription.output.subscription_id
   subscription_type   = "dev"
   resource_group_type = "app"
+
+  depends_on = [
+    module.subscription, module.naming
+  ]
 }
 
 /*
@@ -84,6 +88,10 @@ module "resource_group" {
   location = module.metadata.location
   names    = module.metadata.names
   tags     = module.metadata.tags
+
+  depends_on = [
+    module.metadata
+  ]
 }
 
 /*
@@ -99,6 +107,10 @@ module "vnet" {
   address_space            = ["10.10.0.0/22"]
   address_prefixes_private = ["10.10.0.0/24"]
   address_prefixes_public  = ["10.10.1.0/24"]
+
+  depends_on = [
+    module.resource_group
+  ]
 }
 
 /*
@@ -107,28 +119,6 @@ A Module to generate ssh PEM files
 module "pem" {
   source = "git::https://github.com/franknaw/azure-private-key.git?ref=v1.0.0"
   hosts  = local.hosts
-}
-
-/*
-Simple Module for creating a Bastion VM
-*/
-module "bastion" {
-  source              = "git::https://github.com/franknaw/azure-simple-bastion.git?ref=v1.0.0"
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  names               = module.metadata.names
-  tags                = module.metadata.tags
-
-  subnet_id = module.vnet.subnet_public.id
-
-  username                   = var.username
-  public_key                 = module.pem.ssh_keys["bastion"].public_key_openssh
-  source_address_prefixes    = local.access_list
-  destination_address_prefix = module.runner.private_ip
-
-  depends_on = [
-    module.vnet, module.pem
-  ]
 }
 
 /*
@@ -153,5 +143,27 @@ module "runner" {
 
   depends_on = [
     module.vnet, module.pem
+  ]
+}
+
+/*
+Simple Module for creating a Bastion VM
+*/
+module "bastion" {
+  source              = "git::https://github.com/franknaw/azure-simple-bastion.git?ref=v1.0.0"
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  names               = module.metadata.names
+  tags                = module.metadata.tags
+
+  subnet_id = module.vnet.subnet_public.id
+
+  username                   = var.username
+  public_key                 = module.pem.ssh_keys["bastion"].public_key_openssh
+  source_address_prefixes    = local.access_list
+  destination_address_prefix = module.runner.private_ip
+
+  depends_on = [
+    module.runner
   ]
 }
